@@ -2,14 +2,14 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
-namespace Curly.EntityGrid
+namespace Curly.Grid
 {
     public class TilemapToGridEntityMapping : ScriptableObject
     {
         public struct TilemapToGridEntityMap
         {
             // public Tilemap Tilemap;
-            public GridEntityComponent GridEntityPrefab;
+            public GridEntity GridEntityPrefab;
         }
     }
 }

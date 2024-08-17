@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using System.Threading.Tasks;
 
-namespace Curly.EntityGrid
+namespace Curly.Grid
 {
     public abstract class GridEntityMovementAnimation : ScriptableObject
     {

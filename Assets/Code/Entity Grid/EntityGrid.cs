@@ -1,40 +1,26 @@
 using System.Collections;
 using System.Collections.Generic;
+using Unity.VisualScripting;
 using UnityEngine;
 using UnityEngine.Assertions;
 
-namespace Curly.EntityGrid
+namespace Curly.Grid
 {
-    public class EntityGrid
+    public class EntityGrid : MonoBehaviour
     {
+        [field: SerializeField] public float CellsPerUnit { get; private set; } = 1f;
+
         private Dictionary<Vector2Int, List<GridEntity>> _entities = new Dictionary<Vector2Int, List<GridEntity>>();
         private Dictionary<GridEntity, List<Vector2Int>> _entityPositions = new Dictionary<GridEntity, List<Vector2Int>>();
         HashSet<GridEntity> _entitiesSet = new HashSet<GridEntity>();
 
-        public bool IsPositionBlocked(Vector2Int position, bool allowForPartialBlockage = false)
-        {
-            if (!_entities.ContainsKey(position))
-            {
-                return false;
-            }
+        public Vector2Int WorldToGridPosition(Vector3 worldPosition) => new Vector2Int(Mathf.FloorToInt(worldPosition.x * CellsPerUnit), Mathf.FloorToInt(worldPosition.y * CellsPerUnit));
+        public Vector3 GridToWorldPosition(Vector2Int gridPosition) => new Vector3(gridPosition.x / CellsPerUnit, gridPosition.y / CellsPerUnit, 0);
+        public Vector2Int WorldToGridSize(Vector3 worldSize) => new Vector2Int(Mathf.CeilToInt(worldSize.x * CellsPerUnit), Mathf.CeilToInt(worldSize.y * CellsPerUnit));
+        public Vector3 GridToWorldSize(Vector2Int gridSize) => new Vector3(gridSize.x / CellsPerUnit, gridSize.y / CellsPerUnit, 1);
 
-            foreach (GridEntity entity in _entities[position])
-            {
-                if (entity.Blockage == BlockageType.Full)
-                {
-                    return true;
-                }
-                if (entity.Blockage == BlockageType.Partial && !allowForPartialBlockage)
-                {
-                    return true;
-                }
 
-            }
-
-            return false;
-        }
-
-        public Bounds GetBounds()
+        public Bounds GetGridBounds()
         {
             Bounds bounds = new Bounds();
             foreach (Vector2Int position in _entities.Keys)
@@ -58,7 +44,7 @@ namespace Curly.EntityGrid
                 return false;
             }
 
-            List<Vector2Int> positions = entity.GetOccupiedPositions();
+            List<Vector2Int> positions = entity.GetOccupiedGridPositions();
             foreach (Vector2Int position in positions)
             {
                 if (!_entities.ContainsKey(position))
@@ -76,7 +62,7 @@ namespace Curly.EntityGrid
         public bool AbleToAddEntity(GridEntity entity)
         {
             bool canAllowPartialBlockage = entity.Blockage == BlockageType.Partial;
-            bool isAreaOccupied = IsAreaOccupied(entity.Position, entity.Size, canAllowPartialBlockage);
+            bool isAreaOccupied = IsAreaOccupied(entity.GridPosition, entity.GridSize, canAllowPartialBlockage);
             bool ableToAddEntity = entity.Blockage == BlockageType.None ? !isAreaOccupied : true;
             return ableToAddEntity;
         }
@@ -98,7 +84,7 @@ namespace Curly.EntityGrid
             Assert.IsTrue(_entityPositions.ContainsKey(entity), "Entity is not in the grid");
 
             // lets check if the new position is available
-            if (IsAreaOccupied(newPosition, entity.Size, entity.Blockage == BlockageType.Partial))
+            if (IsAreaOccupied(newPosition, entity.GridSize, entity.Blockage == BlockageType.Partial))
             {
                 return;
             }
@@ -114,8 +100,8 @@ namespace Curly.EntityGrid
             }
 
             // add the entity to the new position
-            entity.Position = newPosition;
-            List<Vector2Int> newPositions = entity.GetOccupiedPositions();
+
+            List<Vector2Int> newPositions = entity.GetOccupiedGridPositions();
             foreach (Vector2Int position in newPositions)
             {
                 if (!_entities.ContainsKey(position))
@@ -147,33 +133,57 @@ namespace Curly.EntityGrid
             return true;
         }
 
-        public List<Vector2Int> CalculatePath(Vector2Int start, Vector2Int end)
+        public bool IsPositionBlocked(Vector2Int position, bool allowForPartialBlockage = false)
         {
-            List<Vector2Int> path = new List<Vector2Int>();
-            path.Add(start);
-            Vector2Int currentPosition = start;
-            while (currentPosition != end)
+            if (!_entities.ContainsKey(position))
             {
-                Vector2Int nextPosition = GetNextPosition(currentPosition, end);
-                path.Add(nextPosition);
-                currentPosition = nextPosition;
+                return false;
             }
-            return path;
+
+            foreach (GridEntity entity in _entities[position])
+            {
+                if (entity.Blockage == BlockageType.Full)
+                {
+                    return true;
+                }
+                if (entity.Blockage == BlockageType.Partial && !allowForPartialBlockage)
+                {
+                    return true;
+                }
+
+            }
+
+            return false;
         }
 
-        private Vector2Int GetNextPosition(Vector2Int current, Vector2Int target)
+        private void OnDrawGizmos()
         {
-            Vector2Int direction = target - current;
-            if (Mathf.Abs(direction.x) > Mathf.Abs(direction.y))
+            Gizmos.color = Color.red;
+            Bounds bounds = GetGridBounds();
+            // make sure that the bounds are at least 10x10 (x and y)
+            bounds.size = new Vector3(Mathf.Max(10, bounds.size.x), Mathf.Max(10, bounds.size.y), 0);
+            Debug.Log("Bounds: " + bounds);
+
+            // draw the grid
+            Gizmos.color = Color.red;
+
+            Gizmos.color = Color.green;
+            for (int x = (int)bounds.min.x; x < bounds.max.x; x++)
             {
-                return new Vector2Int(current.x + (int)Mathf.Sign(direction.x), current.y);
+                for (int y = (int)bounds.min.y; y < bounds.max.y; y++)
+                {
+                    Gizmos.DrawWireCube(GridToWorldPosition(new Vector2Int(x, y)), new Vector3(1 / CellsPerUnit, 1 / CellsPerUnit, 0));
+                }
             }
-            else
+
+
+            Gizmos.color = Color.blue;
+            // draw the entities
+            foreach (GridEntity entity in GetEntities())
             {
-                return new Vector2Int(current.x, current.y + (int)Mathf.Sign(direction.y));
+                Gizmos.DrawWireCube(GridToWorldPosition(entity.GridPosition + entity.GridSize / 2), new Vector3(entity.GridSize.x, 0.1f, entity.GridSize.y));
             }
         }
-
 
     }
 }

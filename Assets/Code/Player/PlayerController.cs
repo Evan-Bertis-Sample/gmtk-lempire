@@ -1,21 +1,21 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
-using Curly.EntityGrid;
+using Curly.Grid;
 using Curly.InputWrapper;
 using Curly.Turns;
 
 namespace Curly.Player
 {
-    [RequireComponent(typeof(GridEntityComponent))]   
+    [RequireComponent(typeof(GridEntity))]   
     public class PlayerController : MonoBehaviour
     {
-        private GridEntityComponent _entity;
+        private GridEntity _entity;
         private Vector2Int _targetDirection;
 
         private void Start()
         {
-            _entity = GetComponent<GridEntityComponent>();
+            _entity = GetComponent<GridEntity>();
             RegisterTurnEvents();
         }
 
@@ -35,7 +35,7 @@ namespace Curly.Player
         {
             Debug.Log("Moving player");
             Vector2Int newPosition = _entity.GridPosition + _targetDirection;
-            _entity.GridComponent.MoveEntity(_entity.GridEntity, newPosition);
+            _entity.Grid.MoveEntity(_entity, newPosition);
         }
 
     }

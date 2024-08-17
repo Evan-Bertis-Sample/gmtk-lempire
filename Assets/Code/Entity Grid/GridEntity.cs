@@ -3,8 +3,9 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Assertions;
 
-namespace Curly.EntityGrid
+namespace Curly.Grid
 {
+#region Helper Types
     public enum BlockageType
     {
         None,
@@ -13,14 +14,16 @@ namespace Curly.EntityGrid
     }
 
     [System.Serializable]
-    public class GridEntityProperties 
+    public class GridEntityProperties
     {
         public int Team = -1;
         public BlockageType Blockage = BlockageType.None;
         public GridEntityMovementAnimation MovementAnimation;
     }
 
-    public class GridEntity
+#endregion
+
+    public class GridEntity : MonoBehaviour
     {
         public static List<Vector2Int> GetOccupiedPositions(Vector2Int position, Vector2Int size)
         {
@@ -35,53 +38,43 @@ namespace Curly.EntityGrid
             return positions;
         }
 
-        public GridEntity(Vector2Int position, Vector2Int size, BlockageType blockage)
-        {
-            Position = position;
-            Size = size;
-            Properties = new GridEntityProperties
-            {
-                Blockage = blockage
-            };
-        }
-
-        public GridEntity(Vector2Int position, Vector2Int size, GridEntityProperties properties)
-        {
-            Position = position;
-            Size = size;
-            Properties = properties;
-        }
-
-        public void SetGrid(EntityGrid grid, bool addEntity = true)
-        {
-            Grid = grid;
-            if (addEntity) grid.AddEntity(this);
-        }
-        
-
-        public EntityGrid Grid { get; private set; }
-        public Vector2Int Position;
-        public Vector2Int Size;
-        public GridEntityProperties Properties;
+        [field: SerializeField] public EntityGrid Grid { get; private set; }
+        [field: SerializeField] public Vector2Int GridSize { get; private set; } = Vector2Int.one;
+        [field: SerializeField] public GridEntityProperties Properties { get; private set; }
+        public Vector2Int GridPosition;
         public BlockageType Blockage => Properties.Blockage;
+        public Vector3 WorldPosition => Grid.GridToWorldPosition(GridPosition);
 
-        public List<Vector2Int> GetOccupiedPositions()
-        {
-            return GetOccupiedPositions(Position, Size);
-        }
-
-        public bool MoveEntity(Vector2Int newPosition)
+        private void Start()
         {
             Assert.IsNotNull(Grid, "Grid cannot be null");
-            if (Grid.IsAreaOccupied(newPosition, Size))
-            {
-                return false;
-            }
-
-            Grid?.MoveEntity(this, newPosition);
-            Position = newPosition;
-            return true;
+            SetGrid(Grid);
         }
 
+        private void Update()
+        {
+            transform.position = WorldPosition;
+        }
+
+        public void SetGrid(EntityGrid grid)
+        {
+            Assert.IsNotNull(grid, "Grid cannot be null");
+            Grid = grid;
+            bool able = !Grid.IsAreaOccupied(GridPosition, GridSize, this);
+            if (!able)
+            {
+                Debug.LogError("Entity could not be added to the grid");
+            }
+        }
+
+        public List<Vector2Int> GetOccupiedGridPositions()
+        {
+            return GetOccupiedPositions(GridPosition, GridSize);
+        }
+
+        private void OnDestroy()
+        {
+            Grid.RemoveEntity(this);
+        }
     }
 }

@@ -2,22 +2,22 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEditor;
-using Curly.EntityGrid;
+using Curly.Grid;
 
-namespace CurlyEditor.EntityGrid
+namespace CurlyEditor.Grid
 {
-    [CustomEditor(typeof(GridEntityComponent))]
+    [CustomEditor(typeof(GridEntity))]
     public class GridEntityComponentEditor : Editor
     {
-        private GridEntityComponent _gridEntityComponent;
+        private GridEntity _gridEntityComponent;
 
         public override void OnInspectorGUI()
         {
             base.OnInspectorGUI();
-            _gridEntityComponent = (GridEntityComponent)target;
+            _gridEntityComponent = (GridEntity)target;
 
             CheckForGrid();
-            if (_gridEntityComponent.GridComponent == null)
+            if (_gridEntityComponent.Grid == null)
             {
                 return;
             }
@@ -27,16 +27,17 @@ namespace CurlyEditor.EntityGrid
 
         private void OnSceneGUI()
         {
-            _gridEntityComponent = (GridEntityComponent)target;
-            if (_gridEntityComponent.GridComponent == null)
+            _gridEntityComponent = (GridEntity)target;
+            if (_gridEntityComponent.Grid == null)
             {
                 return;
             }
 
             // snap the entity to the grid
-            Vector2Int gridPosition = _gridEntityComponent.GridComponent.WorldToGridPosition(_gridEntityComponent.transform.position);
-            Vector3 snappedPosition = _gridEntityComponent.GridComponent.GridToWorldPosition(gridPosition);
+            Vector2Int gridPosition = _gridEntityComponent.Grid.WorldToGridPosition(_gridEntityComponent.transform.position);
+            Vector3 snappedPosition = _gridEntityComponent.Grid.GridToWorldPosition(gridPosition);
             _gridEntityComponent.transform.position = snappedPosition;
+            _gridEntityComponent.GridPosition = gridPosition;
 
             // draw the entity bounds
             switch (_gridEntityComponent.Blockage)
@@ -52,11 +53,11 @@ namespace CurlyEditor.EntityGrid
                     break;
             }
 
-            List<Vector2Int> occupiedPositions = GridEntity.GetOccupiedPositions(gridPosition, _gridEntityComponent.Size);
+            List<Vector2Int> occupiedPositions = GridEntity.GetOccupiedPositions(gridPosition, _gridEntityComponent.GridSize);
             foreach (Vector2Int position in occupiedPositions)
             {
-                Vector3 worldPosition = _gridEntityComponent.GridComponent.GridToWorldPosition(position);
-                Vector3 worldSize = _gridEntityComponent.GridComponent.GridToWorldSize(Vector2Int.one);
+                Vector3 worldPosition = _gridEntityComponent.Grid.GridToWorldPosition(position);
+                Vector3 worldSize = _gridEntityComponent.Grid.GridToWorldSize(Vector2Int.one);
                 Handles.DrawWireCube(worldPosition, worldSize);
             }
 
@@ -64,10 +65,10 @@ namespace CurlyEditor.EntityGrid
 
         private void CheckForGrid()
         {
-            if (_gridEntityComponent.GridComponent == null)
+            if (_gridEntityComponent.Grid == null)
             {
                 // check if there is a grid in the parent
-                EntityGridComponent grid = _gridEntityComponent.GetComponentInParent<EntityGridComponent>();
+                EntityGrid grid = _gridEntityComponent.GetComponentInParent<EntityGrid>();
                 if (grid != null)
                 {
                     _gridEntityComponent.SetGrid(grid);
@@ -85,19 +86,20 @@ namespace CurlyEditor.EntityGrid
 
         private void DrawEntityInfo()
         {
-            EditorGUILayout.BeginHorizontal(CurlyEditorStyles.LightBoxStyle);
+            EditorGUILayout.BeginVertical(CurlyEditorStyles.LightBoxStyle);
             EditorGUILayout.LabelField("Entity Info", CurlyEditorStyles.BoldLabel);
-            EditorGUILayout.EndHorizontal();
 
-            EditorGUILayout.BeginHorizontal(CurlyEditorStyles.LightBoxStyle);
+            EditorGUILayout.BeginHorizontal();
             EditorGUILayout.LabelField("Grid Position", CurlyEditorStyles.BoldLabel);
             EditorGUILayout.LabelField(_gridEntityComponent.GridPosition.ToString());
             EditorGUILayout.EndHorizontal();
 
-            EditorGUILayout.BeginHorizontal(CurlyEditorStyles.LightBoxStyle);
+            EditorGUILayout.BeginHorizontal();
             EditorGUILayout.LabelField("Blockage", CurlyEditorStyles.BoldLabel);
             EditorGUILayout.LabelField(_gridEntityComponent.Blockage.ToString());
             EditorGUILayout.EndHorizontal();
+
+            EditorGUILayout.EndVertical();
         }
     }
 }
