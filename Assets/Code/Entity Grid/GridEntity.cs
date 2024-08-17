@@ -45,6 +45,9 @@ namespace Curly.Grid
         public BlockageType Blockage => Properties.Blockage;
         public Vector3 WorldPosition => Grid.GridToWorldPosition(GridPosition);
 
+        public Bounds GridBounds => new Bounds(new Vector3(GridPosition.x, GridPosition.y, 0), new Vector3(GridSize.x, GridSize.y, 1));
+        public Bounds WorldBounds => new Bounds(WorldPosition, Grid.GridToWorldSize(GridSize));
+
         private void Start()
         {
             Assert.IsNotNull(Grid, "Grid cannot be null");
@@ -63,8 +66,11 @@ namespace Curly.Grid
             bool able = !Grid.IsAreaOccupied(GridPosition, GridSize, this);
             if (!able)
             {
-                Debug.LogError("Entity could not be added to the grid");
+                Debug.LogError($"Entity {name} is unable to be placed on the grid at position {GridPosition} with size {GridSize}");
+                // to prevent future errors, disable the entity
+                gameObject.SetActive(false);
             }
+            Grid.AddEntity(this);
         }
 
         public List<Vector2Int> GetOccupiedGridPositions()

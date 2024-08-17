@@ -19,16 +19,28 @@ namespace Curly.Grid
         public Vector2Int WorldToGridSize(Vector3 worldSize) => new Vector2Int(Mathf.CeilToInt(worldSize.x * CellsPerUnit), Mathf.CeilToInt(worldSize.y * CellsPerUnit));
         public Vector3 GridToWorldSize(Vector2Int gridSize) => new Vector3(gridSize.x / CellsPerUnit, gridSize.y / CellsPerUnit, 1);
 
-
-        public Bounds GetGridBounds()
+        public static Bounds GetGridBounds(IEnumerable<GridEntity> entities)
         {
             Bounds bounds = new Bounds();
-            foreach (Vector2Int position in _entities.Keys)
+            foreach (GridEntity entity in entities)
             {
-                bounds.Encapsulate(new Vector3(position.x, 0, position.y));
+                bounds.Encapsulate(entity.WorldPosition);
             }
             return bounds;
         }
+
+        public static Bounds GetWorldBounds(IEnumerable<GridEntity> entities)
+        {
+            Bounds bounds = new Bounds();
+            foreach (GridEntity entity in entities)
+            {
+                bounds.Encapsulate(entity.WorldBounds);
+            }
+            return bounds;
+        }
+
+        public Bounds GetGridBounds() => GetGridBounds(_entitiesSet);
+        public Bounds GetWorldBounds() => GetWorldBounds(_entitiesSet);
 
         public List<GridEntity> GetEntities()
         {
@@ -86,6 +98,7 @@ namespace Curly.Grid
             // lets check if the new position is available
             if (IsAreaOccupied(newPosition, entity.GridSize, entity.Blockage == BlockageType.Partial))
             {
+                Debug.LogWarning("Cannot move entity to position " + newPosition + " because it is occupied");
                 return;
             }
 
@@ -100,7 +113,7 @@ namespace Curly.Grid
             }
 
             // add the entity to the new position
-
+            entity.GridPosition = newPosition;
             List<Vector2Int> newPositions = entity.GetOccupiedGridPositions();
             foreach (Vector2Int position in newPositions)
             {
@@ -158,30 +171,57 @@ namespace Curly.Grid
 
         private void OnDrawGizmos()
         {
-            Gizmos.color = Color.red;
-            Bounds bounds = GetGridBounds();
-            // make sure that the bounds are at least 10x10 (x and y)
-            bounds.size = new Vector3(Mathf.Max(10, bounds.size.x), Mathf.Max(10, bounds.size.y), 0);
-            Debug.Log("Bounds: " + bounds);
+            HashSet<GridEntity> entities = new HashSet<GridEntity>(_entitiesSet);
 
-            // draw the grid
-            Gizmos.color = Color.red;
-
-            Gizmos.color = Color.green;
-            for (int x = (int)bounds.min.x; x < bounds.max.x; x++)
+            #if UNITY_EDITOR
+            // grab all of the entities in the scene where their grid is this grid
+            GridEntity[] allEntities = FindObjectsOfType<GridEntity>();
+            foreach (GridEntity entity in allEntities)
             {
-                for (int y = (int)bounds.min.y; y < bounds.max.y; y++)
+                if (entity.Grid == this)
                 {
-                    Gizmos.DrawWireCube(GridToWorldPosition(new Vector2Int(x, y)), new Vector3(1 / CellsPerUnit, 1 / CellsPerUnit, 0));
+                    entities.Add(entity);
                 }
             }
+            #endif
 
+            // find the bounds of the grid, based on the entities
+            Bounds bounds = EntityGrid.GetWorldBounds(entities);
+            Gizmos.color = Color.green;
+            Gizmos.DrawWireCube(bounds.center, bounds.size);
 
-            Gizmos.color = Color.blue;
-            // draw the entities
-            foreach (GridEntity entity in GetEntities())
+            // draw the grid lines, in a light blue
+            Gizmos.color = new Color(0.5f, 0.5f, 1f, 0.5f);
+            for (int x = 0; x <= bounds.size.x; x++)
             {
-                Gizmos.DrawWireCube(GridToWorldPosition(entity.GridPosition + entity.GridSize / 2), new Vector3(entity.GridSize.x, 0.1f, entity.GridSize.y));
+                Vector3 start = bounds.min + new Vector3(x, 0, 0);
+                Vector3 end = bounds.min + new Vector3(x, bounds.size.y, 0);
+                Gizmos.DrawLine(start, end);
+            }
+
+            for (int y = 0; y <= bounds.size.y; y++)
+            {
+                Vector3 start = bounds.min + new Vector3(0, y, 0);
+                Vector3 end = bounds.min + new Vector3(bounds.size.x, y, 0);
+                Gizmos.DrawLine(start, end);
+            }
+
+            // draw all of the entities on the grid
+            foreach (GridEntity entity in entities)
+            {
+                switch (entity.Blockage)
+                {
+                    case BlockageType.None:
+                        Gizmos.color = Color.blue;
+                        break;
+                    case BlockageType.Partial:
+                        Gizmos.color = Color.yellow;
+                        break;
+                    case BlockageType.Full:
+                        Gizmos.color = Color.red;
+                        break;
+                }
+                Gizmos.DrawWireCube(entity.WorldPosition, GridToWorldSize(entity.GridSize));
             }
         }
 
