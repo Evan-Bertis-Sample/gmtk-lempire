@@ -45,6 +45,15 @@ namespace Curly.EntityGrid
             };
         }
 
+        public GridEntity(EntityGrid grid, Vector2Int position, Vector2Int size, GridEntityProperties properties)
+        {
+            Grid = grid;
+            Position = position;
+            Size = size;
+            grid.AddEntity(this);
+            Properties = properties;
+        }
+
         public EntityGrid Grid { get; private set; }
         public Vector2Int Position { get; protected set; }
         public Vector2Int Size { get; protected set; }

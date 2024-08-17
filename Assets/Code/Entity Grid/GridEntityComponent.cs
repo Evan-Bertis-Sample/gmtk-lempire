@@ -1,25 +1,24 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.Assertions;
 
 namespace Curly.EntityGrid
 {
     public class GridEntityComponent : MonoBehaviour
     {
         [field: SerializeField] public EntityGridComponent Grid { get; private set; }
-        [field: SerializeField] public Vector2Int Position { get; private set; }
         [field: SerializeField] public Vector2Int Size { get; private set; } = Vector2Int.one;
-        [field: SerializeField] public BlockageType Blockage { get; private set; } = BlockageType.None;
-
+        [field: SerializeField] public GridEntityProperties Properties { get; private set; }
         public GridEntity GridEntity { get; private set; }
 
-        public void Initialize(EntityGridComponent grid, Vector2Int position, Vector2Int size, BlockageType blockage)
+        public Vector2Int Position => Grid.WorldToGridPosition(transform.position);
+        public BlockageType Blockage => Properties.Blockage;
+
+        private void Start()
         {
-            Grid = grid;
-            Position = position;
-            Size = size;
-            Blockage = blockage;
-            GridEntity = new GridEntity(grid.Grid, position, size, blockage);
+            Assert.IsNotNull(Grid, "Grid cannot be null");
+            SetGrid(Grid);
         }
 
         public void MoveEntity(Vector2Int newPosition)
@@ -29,7 +28,25 @@ namespace Curly.EntityGrid
                 return;
             }
             Grid.MoveEntity(GridEntity, newPosition);
-            Position = newPosition;
+        }
+
+        public void SetGrid(EntityGridComponent grid)
+        {
+            Assert.IsNotNull(grid, "Grid cannot be null");
+
+            if (Grid != null)
+            {
+                Grid.RemoveEntity(GridEntity);
+            }
+
+            Grid = grid;
+            GridEntity = new GridEntity(grid.Grid, Position, Size, Properties);
+            bool able = Grid.AddEntity(GridEntity);
+
+            if (!able)
+            {
+                Debug.LogError("Entity could not be added to the grid");
+            }
         }
 
         private void OnDestroy()
