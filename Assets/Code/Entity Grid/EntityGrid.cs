@@ -1,6 +1,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.Assertions;
 
 namespace Curly.EntityGrid
 {
@@ -8,6 +9,7 @@ namespace Curly.EntityGrid
     {
         private Dictionary<Vector2Int, List<GridEntity>> _entities = new Dictionary<Vector2Int, List<GridEntity>>();
         private Dictionary<GridEntity, List<Vector2Int>> _entityPositions = new Dictionary<GridEntity, List<Vector2Int>>();
+        HashSet<GridEntity> _entitiesSet = new HashSet<GridEntity>();
 
         public bool IsPositionBlocked(Vector2Int position, bool allowForPartialBlockage = false)
         {
@@ -44,11 +46,12 @@ namespace Curly.EntityGrid
 
         public List<GridEntity> GetEntities()
         {
-            return new List<GridEntity>(_entityPositions.Keys);
+            return new List<GridEntity>(_entitiesSet);
         }
 
         public bool AddEntity(GridEntity entity)
         {
+            Assert.IsNotNull(entity, "Entity cannot be null");
             bool able = AbleToAddEntity(entity);
             if (!able)
             {
@@ -65,6 +68,7 @@ namespace Curly.EntityGrid
                 _entities[position].Add(entity);
             }
             _entityPositions.Add(entity, positions);
+            _entitiesSet.Add(entity);
 
             return true;
         }
@@ -85,9 +89,43 @@ namespace Curly.EntityGrid
                 _entities.Remove(position);
             }
             _entityPositions.Remove(entity);
+            _entitiesSet.Remove(entity);
         }
 
-        public void MoveEntity(GridEntity entity, Vector2Int newPosition) => entity.MoveEntity(newPosition);
+        public void MoveEntity(GridEntity entity, Vector2Int newPosition)
+        {
+            Assert.IsNotNull(entity, "Entity cannot be null");
+            Assert.IsTrue(_entityPositions.ContainsKey(entity), "Entity is not in the grid");
+
+            // lets check if the new position is available
+            if (IsAreaOccupied(newPosition, entity.Size, entity.Blockage == BlockageType.Partial))
+            {
+                return;
+            }
+
+            // remove the entity from the old position
+            foreach (Vector2Int position in _entityPositions[entity])
+            {
+                _entities[position].Remove(entity);
+                if (_entities[position].Count == 0)
+                {
+                    _entities.Remove(position);
+                }
+            }
+
+            // add the entity to the new position
+            entity.Position = newPosition;
+            List<Vector2Int> newPositions = entity.GetOccupiedPositions();
+            foreach (Vector2Int position in newPositions)
+            {
+                if (!_entities.ContainsKey(position))
+                {
+                    _entities.Add(position, new List<GridEntity>());
+                }
+                _entities[position].Add(entity);
+            }
+            _entityPositions[entity] = newPositions;
+        }
 
         public bool IsAreaOccupied(Vector2Int position, Vector2Int size, bool allowForPartialBlockage = false)
         {

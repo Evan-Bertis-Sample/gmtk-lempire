@@ -17,23 +17,25 @@ namespace CurlyEditor.EntityGrid
             _gridEntityComponent = (GridEntityComponent)target;
 
             CheckForGrid();
-            if (_gridEntityComponent.Grid == null)
+            if (_gridEntityComponent.GridComponent == null)
             {
                 return;
             }
+
+            DrawEntityInfo();
         }
 
         private void OnSceneGUI()
         {
             _gridEntityComponent = (GridEntityComponent)target;
-            if (_gridEntityComponent.Grid == null)
+            if (_gridEntityComponent.GridComponent == null)
             {
                 return;
             }
 
             // snap the entity to the grid
-            Vector2Int gridPosition = _gridEntityComponent.Grid.WorldToGridPosition(_gridEntityComponent.transform.position);
-            Vector3 snappedPosition = _gridEntityComponent.Grid.GridToWorldPosition(gridPosition);
+            Vector2Int gridPosition = _gridEntityComponent.GridComponent.WorldToGridPosition(_gridEntityComponent.transform.position);
+            Vector3 snappedPosition = _gridEntityComponent.GridComponent.GridToWorldPosition(gridPosition);
             _gridEntityComponent.transform.position = snappedPosition;
 
             // draw the entity bounds
@@ -53,8 +55,8 @@ namespace CurlyEditor.EntityGrid
             List<Vector2Int> occupiedPositions = GridEntity.GetOccupiedPositions(gridPosition, _gridEntityComponent.Size);
             foreach (Vector2Int position in occupiedPositions)
             {
-                Vector3 worldPosition = _gridEntityComponent.Grid.GridToWorldPosition(position);
-                Vector3 worldSize = _gridEntityComponent.Grid.GridToWorldSize(Vector2Int.one);
+                Vector3 worldPosition = _gridEntityComponent.GridComponent.GridToWorldPosition(position);
+                Vector3 worldSize = _gridEntityComponent.GridComponent.GridToWorldSize(Vector2Int.one);
                 Handles.DrawWireCube(worldPosition, worldSize);
             }
 
@@ -62,7 +64,7 @@ namespace CurlyEditor.EntityGrid
 
         private void CheckForGrid()
         {
-            if (_gridEntityComponent.Grid == null)
+            if (_gridEntityComponent.GridComponent == null)
             {
                 // check if there is a grid in the parent
                 EntityGridComponent grid = _gridEntityComponent.GetComponentInParent<EntityGridComponent>();
@@ -79,6 +81,23 @@ namespace CurlyEditor.EntityGrid
                     EditorGUILayout.EndHorizontal();
                 }
             }
+        }
+
+        private void DrawEntityInfo()
+        {
+            EditorGUILayout.BeginHorizontal(CurlyEditorStyles.LightBoxStyle);
+            EditorGUILayout.LabelField("Entity Info", CurlyEditorStyles.BoldLabel);
+            EditorGUILayout.EndHorizontal();
+
+            EditorGUILayout.BeginHorizontal(CurlyEditorStyles.LightBoxStyle);
+            EditorGUILayout.LabelField("Grid Position", CurlyEditorStyles.BoldLabel);
+            EditorGUILayout.LabelField(_gridEntityComponent.GridPosition.ToString());
+            EditorGUILayout.EndHorizontal();
+
+            EditorGUILayout.BeginHorizontal(CurlyEditorStyles.LightBoxStyle);
+            EditorGUILayout.LabelField("Blockage", CurlyEditorStyles.BoldLabel);
+            EditorGUILayout.LabelField(_gridEntityComponent.Blockage.ToString());
+            EditorGUILayout.EndHorizontal();
         }
     }
 }
