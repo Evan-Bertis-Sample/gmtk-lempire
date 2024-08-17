@@ -6,54 +6,23 @@ namespace Curly.EntityGrid
 {
     public class EntityGrid
     {
-        public enum BlockageType
-        {
-            None,
-            Full,
-            Partial
-        }
-
-        public class GridEntity
-        {
-            public static List<Vector2Int> GetOccupiedPositions(Vector2Int position, Vector2Int size)
-            {
-                List<Vector2Int> positions = new List<Vector2Int>();
-                for (int x = 0; x < size.x; x++)
-                {
-                    for (int y = 0; y < size.y; y++)
-                    {
-                        positions.Add(position + new Vector2Int(x, y));
-                    }
-                }
-                return positions;
-            }
-
-
-            public EntityGrid Grid { get; private set; }
-            public Vector2Int Position { get; protected set; }
-            public Vector2Int Size { get; protected set; }
-            public BlockageType Blockage { get; private set; }
-
-            public List<Vector2Int> GetOccupiedPositions()
-            {
-                return GetOccupiedPositions(Position, Size);
-            }
-
-            public bool MoveEntity(Vector2Int newPosition)
-            {
-                if (Grid.IsAreaOccupied(newPosition, Size))
-                {
-                    return false;
-                }
-                Grid.MoveEntity(this, newPosition);
-                Position = newPosition;
-                return true;
-            }
-
-        }
-
         private Dictionary<Vector2Int, GridEntity> _entities = new Dictionary<Vector2Int, GridEntity>();
         private Dictionary<GridEntity, List<Vector2Int>> _entityPositions = new Dictionary<GridEntity, List<Vector2Int>>();
+
+        public Bounds GetBounds()
+        {
+            Bounds bounds = new Bounds();
+            foreach (Vector2Int position in _entities.Keys)
+            {
+                bounds.Encapsulate(new Vector3(position.x, 0, position.y));
+            }
+            return bounds;
+        }
+
+        public List<GridEntity> GetEntities()
+        {
+            return new List<GridEntity>(_entities.Values);
+        }
 
         public void AddEntity(GridEntity entity)
         {
@@ -96,5 +65,34 @@ namespace Curly.EntityGrid
             }
             return true;
         }
+
+        public List<Vector2Int> CalculatePath(Vector2Int start, Vector2Int end)
+        {
+            List<Vector2Int> path = new List<Vector2Int>();
+            path.Add(start);
+            Vector2Int currentPosition = start;
+            while (currentPosition != end)
+            {
+                Vector2Int nextPosition = GetNextPosition(currentPosition, end);
+                path.Add(nextPosition);
+                currentPosition = nextPosition;
+            }
+            return path;
+        }
+
+        private Vector2Int GetNextPosition(Vector2Int current, Vector2Int target)
+        {
+            Vector2Int direction = target - current;
+            if (Mathf.Abs(direction.x) > Mathf.Abs(direction.y))
+            {
+                return new Vector2Int(current.x + (int)Mathf.Sign(direction.x), current.y);
+            }
+            else
+            {
+                return new Vector2Int(current.x, current.y + (int)Mathf.Sign(direction.y));
+            }
+        }
+
+
     }
 }
