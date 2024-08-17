@@ -90,13 +90,20 @@ namespace Curly.Grid
             _entitiesSet.Remove(entity);
         }
 
-        public void MoveEntity(GridEntity entity, Vector2Int newPosition)
+        public void MoveEntity(GridEntity entity, Vector2Int newPosition, HashSet<GridEntity> ignoreEntities = null)
         {
             Assert.IsNotNull(entity, "Entity cannot be null");
             Assert.IsTrue(_entityPositions.ContainsKey(entity), "Entity is not in the grid");
 
+            if (ignoreEntities == null)
+            {
+                ignoreEntities = new HashSet<GridEntity>();
+            }
+
+            ignoreEntities.Add(entity);
+
             // lets check if the new position is available
-            if (IsAreaOccupied(newPosition, entity.GridSize, entity.Blockage == BlockageType.Partial))
+            if (IsAreaOccupied(newPosition, entity.GridSize, entity.Blockage == BlockageType.Partial, ignoreEntities))
             {
                 Debug.LogWarning("Cannot move entity to position " + newPosition + " because it is occupied");
                 return;
@@ -126,41 +133,45 @@ namespace Curly.Grid
             _entityPositions[entity] = newPositions;
         }
 
-        public bool IsAreaOccupied(Vector2Int position, Vector2Int size, bool allowForPartialBlockage = false)
+        public bool IsAreaOccupied(Vector2Int position, Vector2Int size, bool allowForPartialBlockage = false, HashSet<GridEntity> ignoreEntities = null)
         {
             for (int x = 0; x < size.x; x++)
             {
                 for (int y = 0; y < size.y; y++)
                 {
                     Vector2Int currentPosition = position + new Vector2Int(x, y);
-                    if (!_entities.ContainsKey(currentPosition))
+                    if (IsPositionBlocked(currentPosition, allowForPartialBlockage, ignoreEntities))
                     {
-                        return false;
-                    }
-                    if (!allowForPartialBlockage && IsPositionBlocked(currentPosition, false))
-                    {
-                        return false;
+                        return true;
                     }
                 }
             }
             return true;
         }
 
-        public bool IsPositionBlocked(Vector2Int position, bool allowForPartialBlockage = false)
+        public bool IsPositionBlocked(Vector2Int position, bool allowForPartialBlockage = false, HashSet<GridEntity> ignoreEntities = null)
         {
             if (!_entities.ContainsKey(position))
             {
+                Debug.Log("Position is not blocked");
                 return false;
             }
 
             foreach (GridEntity entity in _entities[position])
             {
+                if (ignoreEntities != null && ignoreEntities.Contains(entity))
+                {
+                    continue;
+                }
+
                 if (entity.Blockage == BlockageType.Full)
                 {
+                    Debug.Log("Position is blocked by " + entity.name);
                     return true;
                 }
                 if (entity.Blockage == BlockageType.Partial && !allowForPartialBlockage)
                 {
+                    Debug.Log("Position is partially blocked by " + entity.name);
                     return true;
                 }
 

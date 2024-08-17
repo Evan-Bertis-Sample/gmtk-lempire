@@ -63,8 +63,13 @@ namespace Curly.Grid
         {
             Assert.IsNotNull(grid, "Grid cannot be null");
             Grid = grid;
-            bool able = !Grid.IsAreaOccupied(GridPosition, GridSize, this);
-            if (!able)
+            HashSet<GridEntity> ignore = new HashSet<GridEntity>
+            {
+                this
+            };
+
+            bool occupied = Grid.IsAreaOccupied(GridPosition, GridSize, true, ignore);
+            if (occupied)
             {
                 Debug.LogError($"Entity {name} is unable to be placed on the grid at position {GridPosition} with size {GridSize}");
                 // to prevent future errors, disable the entity
